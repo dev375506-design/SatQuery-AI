@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "framework": null,
+  "installCommand": "echo skip-install",
+  "buildCommand": "node write-api-config.js",
+  "outputDirectory": "frontend"
+}

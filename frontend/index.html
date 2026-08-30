@@ -1,0 +1,589 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SATQUERY AI — Agent for Satellite Image Understanding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grid-overlay"></div>
+
+ 
+<!-- ============ LANDING ============ -->
+<div id="landing">
+  <div class="nav">
+    <div class="brand"><span class="dot"></span>SATQUERY AI</div>
+    <div class="navlinks">
+      <a href="#" onclick="showLanding();return false;">Home</a>
+      <a href="#" onclick="launchApp('demo');return false;">Demo</a>
+      <a href="#" onclick="scrollToCaps();return false;">Capabilities</a>
+      <a href="#" onclick="launchApp('models');return false;">Models</a>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="launchApp()">Launch Analysis</button>
+  </div>
+ 
+  <div class="hero">
+    <div>
+      <div class="eyebrow">● AGENTIC REMOTE-SENSING SYSTEM</div>
+      <h1>SATQUERY <span>AI</span></h1>
+      <h1 style="font-size:26px;color:var(--tx2);font-weight:500;margin-top:6px;margin-bottom:18px;">AI Agent for Satellite Image Understanding</h1>
+      <p>Ask questions about satellite imagery. SATQUERY AI automatically selects the appropriate remote-sensing analysis workflow and returns visual evidence with an explainable execution trace.</p>
+      <div class="ctas">
+        <button class="btn btn-primary" onclick="launchApp()">Launch Analysis</button>
+        <button class="btn btn-ghost" onclick="scrollToCaps()">Explore Capabilities</button>
+      </div>
+      <div class="hero-stats">
+        <div><b>5</b><span>SPECIALIST MODELS</span></div>
+        <div><b>91%</b><span>AVG. CONFIDENCE</span></div>
+        <div><b>OPT+SAR</b><span>MULTI-MODAL</span></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <canvas id="heroCanvas" width="640" height="440" style="width:100%;height:100%;"></canvas>
+      <div class="hud">
+        <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
+        <div class="hud-corner bl"></div><div class="hud-corner br"></div>
+        <div class="hud-label" style="top:16px;left:34px;" id="heroSceneId">SCENE_ID: S2-L2A-DEMO-230225</div>
+        <div class="landing-geo" id="heroGeoStatus">GEOLOCATION READY</div>
+        <div class="hud-label" style="bottom:16px;right:34px;" id="heroLiveCoords">LAT 23.0225° N · LON 72.5714° E</div>
+        <div class="crosshair"></div>
+      </div>
+    </div>
+  </div>
+ 
+  <div class="capabilities" id="caps">
+    <div class="cap-head">
+      <div><div class="section-label">Core Capabilities</div><h2>One agent, five specialist workflows</h2></div>
+    </div>
+    <div class="cap-grid">
+      <div class="cap-card"><div class="ic">◆</div><h3>AI Agent</h3><p>Classifies intent and routes each query to the correct specialist capability.</p></div>
+      <div class="cap-card"><div class="ic">?</div><h3>Single Image VQA</h3><p>Answers free-form questions about a single satellite scene.</p></div>
+      <div class="cap-card"><div class="ic">▢</div><h3>Region Grounding</h3><p>Localizes and highlights the exact region a query refers to.</p></div>
+      <div class="cap-card"><div class="ic">⇄</div><h3>Bi-Temporal Change</h3><p>Compares two dates of imagery and maps what changed.</p></div>
+      <div class="cap-card"><div class="ic">∿</div><h3>Optical + SAR Fusion</h3><p>Fuses optical and radar data for all-weather detection.</p></div>
+      <div class="cap-card"><div class="ic">i</div><h3>Explainable Execution</h3><p>Every answer ships with a visible, auditable reasoning trace.</p></div>
+    </div>
+  </div>
+ 
+  <div class="foot">
+    <span>SATQUERY AI · SIH 2026 Prototype</span>
+    <span>DATASETS: Sentinel-2 · Sentinel-1 SAR · BigEarthNet</span>
+  </div>
+</div>
+ 
+<!-- ============ APP SHELL ============ -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sb-brand"><span class="dot"></span>SATQUERY AI</div>
+    <div class="sb-item active" data-view="workspace" onclick="switchView('workspace')"><span class="ic">▣</span>New Analysis</div>
+    <div class="sb-item" data-view="history" onclick="switchView('history')"><span class="ic">◷</span>History</div>
+    <div class="sb-item" data-view="models" onclick="switchView('models')"><span class="ic">◆</span>Models</div>
+    <div class="sb-item" data-view="datasets" onclick="switchView('datasets')"><span class="ic">▤</span>Datasets</div>
+    <div class="sb-item" data-view="settings" onclick="switchView('settings')"><span class="ic">⚙</span>Settings</div>
+    <div class="sb-foot">
+      <div class="sb-status"><span class="led"></span>AGENT ONLINE</div>
+      <div class="sb-item" onclick="showLanding()"><span class="ic">←</span>Exit to Home</div>
+    </div>
+  </div>
+ 
+  <div class="main">
+    <!-- WORKSPACE VIEW -->
+    <div id="view-workspace">
+      <div class="topbar">
+        <div><h1>Satellite Analysis Workspace</h1><div class="sub">// natural-language query → agent routing → specialist inference</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="loadDemo()">⟲ Load Demo</button>
+      </div>
+      <div class="content">
+        <!-- MODE SELECTOR TABS -->
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tabSingleImage" onclick="switchAnalysisMode('single')">▣ Single Image</button>
+          <button class="mode-tab" id="tabBiTemporal" onclick="switchAnalysisMode('bitemporal')">⇄ Bi-Temporal Analysis</button>
+          <button class="mode-tab" id="tabFusion" onclick="switchAnalysisMode('fusion')">∿ Optical + SAR Fusion</button>
+        </div>
+
+        <!-- ============ SINGLE IMAGE CONTENT ============ -->
+        <div id="singleImageContent">
+        <!-- GEOLOCATION / SCENE SELECTOR -->
+        <div class="panel" style="margin-bottom:18px;">
+          <div class="panel-head"><h2>◎ Geolocation / Scene Selector</h2><span class="tag" id="mapTag">click map to pick scene</span></div>
+          <div class="map-panel-grid">
+            <div class="map-stage">
+              <div class="map-toolbar">
+                <div class="map-search">
+                  <input id="locSearch" type="text" placeholder="City or lat, lon" onkeydown="if(event.key==='Enter'){searchLocation();}">
+                  <button class="btn btn-ghost btn-sm" onclick="searchLocation()">SEARCH</button>
+                </div>
+                <div class="mode-sel">
+                  <button class="mode-btn active" id="modeSCENE" onclick="setGeoMode('SCENE')">SCENE</button>
+                  <button class="mode-btn" id="modeAOI" onclick="setGeoMode('AOI')">AOI</button>
+                  <button class="mode-btn" id="modeCOMPARE" onclick="setGeoMode('COMPARE')">COMPARE</button>
+                </div>
+              </div>
+              <div class="search-msg" id="searchMsg"></div>
+              <div class="aoi-bar" id="aoiBar">
+                <span class="hint" id="aoiHint">DRAW AOI — click the map to add vertices</span>
+                <button class="btn btn-ghost btn-sm" onclick="startAoiDraw()">DRAW AOI</button>
+                <button class="btn btn-ghost btn-sm" onclick="finishAoi()">FINISH</button>
+                <button class="btn btn-ghost btn-sm" onclick="clearAoi()">CLEAR AOI</button>
+                <button class="btn btn-primary btn-sm" onclick="useAoi()">USE AOI</button>
+              </div>
+              <div class="capture-bar" id="captureBar">
+                <span class="hint">MAP CAPTURE · DEMO SCENE — not a Sentinel-2 product</span>
+                <button class="btn btn-primary btn-sm" type="button" onclick="captureMapAsImage('img1')">CAPTURE SATELLITE VIEW</button>
+                <button class="btn btn-ghost btn-sm" type="button" onclick="captureMapAsImage('img2')">CAPTURE AS IMAGE 2</button>
+                <button class="btn btn-ghost btn-sm" type="button" onclick="clearCapture()">CLEAR CAPTURE</button>
+              </div>
+              <div class="cmp-bar" id="cmpBar">
+                <span class="hint" id="cmpHint">Click map: Scene A, then Scene B</span>
+                <button class="btn btn-ghost btn-sm" onclick="setComparePick('A')">SCENE A</button>
+                <button class="btn btn-ghost btn-sm" onclick="setComparePick('B')">SCENE B</button>
+                <button class="btn btn-primary btn-sm" onclick="runComparison()">RUN COMPARISON</button>
+              </div>
+              <div style="position:relative;">
+                <div id="sceneMap"></div>
+                <div class="map-hud" id="mapHud">
+                  <div class="map-hud-top">
+                    <span class="hud-chip" id="hudSceneId">SCENE —</span>
+                    <span class="hud-chip" id="hudCoords">LAT — · LON —</span>
+                    <span class="hud-chip" id="hudZoom">Z —</span>
+                    <span class="hud-chip" id="hudAcq">ACQ DEMO/SIMULATED</span>
+                    <span class="hud-chip" id="hudCloud">CLOUD — DEMO</span>
+                  </div>
+                  <div class="map-hud-tools">
+                    <button type="button" title="Zoom in" onclick="hudZoom(1)">+</button>
+                    <button type="button" title="Zoom out" onclick="hudZoom(-1)">−</button>
+                    <button type="button" title="Center scene" onclick="centerScene()">◎</button>
+                    <button type="button" title="Current location" onclick="requestBrowserLocation()">⌖</button>
+                  </div>
+                  <div class="map-north">N<span>▲</span></div>
+                </div>
+                <div id="mapLoadError" class="hidden" style="position:absolute;left:10px;right:10px;bottom:10px;z-index:600;pointer-events:none;font-family:var(--mono);font-size:10.5px;color:var(--tx3);text-align:left;padding:8px 10px;background:rgba(6,10,18,0.88);border:1px solid var(--line2);">
+                  <div style="color:var(--amber);">⚠ MAP TILES UNAVAILABLE</div>
+                  <div>Live map requires internet (OSM / Esri). Map clicks, search, and coordinates still work. Imagery is DEMO/SIMULATED.</div>
+                </div>
+              </div>
+            </div>
+            <div class="map-side">
+              <div class="coord-readout">
+                <span class="cr-lbl">SELECTED LATITUDE</span>
+                <span class="cr-val" id="readLat">23.0225° N</span><br>
+                <span class="cr-lbl" style="margin-top:6px;display:inline-block;">SELECTED LONGITUDE</span>
+                <span class="cr-val" id="readLon">72.5714° E</span>
+              </div>
+              <div class="meta-mini" id="sceneMetaMini">
+                <b>SENSOR</b> Sentinel-2<br>
+                <b>PRODUCT</b> L2A / DEMO<br>
+                <b>GSD</b> 10m<br>
+                <b>ACQUISITION</b> DEMO/SIMULATED<br>
+                <b>CLOUD</b> — DEMO
+              </div>
+              <label class="flabel" style="margin-bottom:6px;">Captured Scene Preview</label>
+              <div class="preview-modes">
+                <button type="button" class="active" id="pvRGB" onclick="setPreviewMode('RGB')">RGB</button>
+                <button type="button" id="pvNIR" onclick="setPreviewMode('NIR')">NIR</button>
+                <button type="button" id="pvSAR" onclick="setPreviewMode('SAR')">SAR</button>
+              </div>
+              <div id="scenePreview" style="border:1px solid var(--line2);border-radius:5px;overflow:hidden;height:90px;margin-bottom:12px;background:#0a111c;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--tx3);">click map to capture</div>
+              <div id="aoiStatsBox" class="demo-est hidden">
+                <div class="de-title">DEMO ESTIMATE</div>
+                <div id="aoiStatsText">—</div>
+              </div>
+              <div class="scene-status" id="sceneStatus"><span class="led"></span><span id="sceneStatusText">NO SCENE SELECTED</span></div>
+              <button class="btn btn-primary btn-sm btn-select-loc" onclick="useLocation()">USE LOCATION</button>
+              <button class="btn btn-ghost btn-sm btn-select-loc" style="margin-top:8px;" onclick="analyzeThisScene()">ANALYZE THIS SCENE</button>
+            </div>
+          </div>
+        </div>
+ 
+        <div class="ws-grid">
+          <!-- LEFT: input -->
+          <div class="panel">
+            <div class="panel-head"><h2 id="uploadHeading">▣ Upload Satellite Image</h2><span class="tag" id="uploadTag">0 / 1 loaded</span></div>
+            <div class="upload-grid" id="uploadGrid"></div>
+            <div class="fmt-row">Accepted: GeoTIFF · TIFF · PNG · JPEG · or capture the Leaflet view (MAP CAPTURE · DEMO SCENE — not Sentinel-2)</div>
+            <div id="sceneSourceNote" class="hidden" style="font-family:var(--mono);font-size:10.5px;color:var(--cyan);margin:-6px 0 14px;">◎ Using map-selected scene — ask any question below.</div>
+ 
+            <label class="flabel">Natural Language Query</label>
+            <textarea class="query" id="queryInput" placeholder="e.g. What changed between these two images?"></textarea>
+            <div class="chips" id="queryChips"></div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin:-8px 0 4px;" id="aiEngineNote">Answer engine: <span id="aiEngineLabel">Simulated (offline)</span> — <a href="#" onclick="switchView('settings');return false;" style="color:var(--cyan);text-decoration:underline;">configure Gemini</a></div>
+ 
+            <div id="validationBlock" class="hidden">
+              <label class="flabel">Input Validation</label>
+              <div class="validation-list" id="validationList"></div>
+            </div>
+ 
+            <div class="actions-row" style="margin-top:18px;">
+              <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()" disabled>ANALYZE</button>
+            </div>
+          </div>
+ 
+          <!-- RIGHT: execution trace -->
+          <div class="panel">
+            <div class="panel-head"><h2>◉ AI Execution Trace</h2><span class="tag" id="traceStatus">idle</span></div>
+            <div id="traceEmpty" style="font-size:12px;color:var(--tx3);font-family:var(--mono);padding:20px 4px;">
+              Awaiting query — load a demo or upload imagery to begin.
+            </div>
+            <div class="trace-list hidden" id="traceList"></div>
+            <div class="trace-meta hidden" id="traceMeta">
+              <div class="meta-box"><div class="k">MODEL</div><div class="v" id="metaModel">—</div></div>
+              <div class="meta-box"><div class="k">CONFIDENCE</div><div class="v" id="metaConf">—</div></div>
+            </div>
+          </div>
+        </div>
+ 
+        <!-- RESULTS -->
+        <div class="panel results-wrap hidden" id="resultsPanel">
+          <div class="panel-head"><h2>✓ Result</h2><span class="tag" id="resultTaskTag">—</span></div>
+          <div id="resultsBody"></div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="scrollToTrace()">View Execution Trace</button>
+            <button class="btn btn-primary btn-sm" onclick="newAnalysis()">New Analysis</button>
+          </div>
+        </div>
+        </div><!-- /singleImageContent -->
+
+        <!-- ============ BI-TEMPORAL CHANGE ANALYSIS PANEL ============ -->
+        <div id="biTemporalContent" class="hidden">
+          <div class="bt-panel">
+            <div class="bt-header">
+              <h2>⇄ Bi-Temporal Change Analysis</h2>
+              <div class="bt-sub">Compare two observations of the same region to detect and explain changes</div>
+            </div>
+
+            <!-- Upload Before / After -->
+            <div class="bt-upload-grid">
+              <div class="bt-upload-card" id="btSlotBefore" onclick="btTriggerUpload('before')">
+                <div class="bt-slot-icon">⇪</div>
+                <div class="bt-slot-label">BEFORE IMAGE</div>
+                <div class="bt-slot-sub">Earlier / before observation</div>
+                <input class="bt-file" type="file" id="btFileBefore" accept="image/png,image/jpeg,image/tiff,.png,.jpg,.jpeg,.tif,.tiff" onchange="btHandleUpload('before', this)">
+              </div>
+              <div class="bt-upload-card" id="btSlotAfter" onclick="btTriggerUpload('after')">
+                <div class="bt-slot-icon">⇪</div>
+                <div class="bt-slot-label">AFTER IMAGE</div>
+                <div class="bt-slot-sub">Later / after observation</div>
+                <input class="bt-file" type="file" id="btFileAfter" accept="image/png,image/jpeg,image/tiff,.png,.jpg,.jpeg,.tif,.tiff" onchange="btHandleUpload('after', this)">
+              </div>
+            </div>
+
+            <!-- Query -->
+            <div class="bt-query-section">
+              <label class="flabel">Optional Query</label>
+              <textarea id="btQueryInput" placeholder="e.g. What changed between these images? · Has the built-up area increased? · Did vegetation decrease?"></textarea>
+            </div>
+
+            <!-- Suggested queries -->
+            <div class="chips" style="margin-bottom:22px;">
+              <button class="chip" onclick="btSetQuery('What changed between these images?')">What changed?</button>
+              <button class="chip" onclick="btSetQuery('Has the built-up area increased?')">Built-up increase?</button>
+              <button class="chip" onclick="btSetQuery('Has vegetation decreased?')">Vegetation decrease?</button>
+              <button class="chip" onclick="btSetQuery('Where did the change occur?')">Where did change occur?</button>
+              <button class="chip" onclick="btSetQuery('Identify the major changes.')">Major changes</button>
+            </div>
+
+            <!-- Analyze button -->
+            <div class="bt-analyze-row">
+              <button class="btn-analyze-bt" id="btAnalyzeBtn" onclick="runBiTemporalAnalysis()" disabled>ANALYZE CHANGES</button>
+            </div>
+
+            <!-- Progress -->
+            <div id="btProgress" class="bt-progress hidden"></div>
+
+            <!-- Error -->
+            <div id="btError" class="bt-error hidden"></div>
+
+            <!-- Results -->
+            <div id="btResults" class="bt-results hidden">
+
+              <!-- Before / After -->
+              <div class="bt-section">
+                <div class="bt-section-title">Before & After</div>
+                <div class="bt-images-row">
+                  <div class="bt-img-card"><img id="btResultBefore" alt="Before"><div class="bt-img-label">BEFORE</div></div>
+                  <div class="bt-img-card"><img id="btResultAfter" alt="After"><div class="bt-img-label">AFTER</div></div>
+                </div>
+              </div>
+
+              <!-- Change Map -->
+              <div class="bt-section">
+                <div class="bt-section-title">Change Map</div>
+                <div class="bt-full-img"><img id="btResultChangeMap" alt="Change Map"><div class="bt-img-label">AI-GENERATED CHANGE MAP — Changed regions highlighted</div></div>
+              </div>
+
+              <!-- Change Overlay -->
+              <div class="bt-section">
+                <div class="bt-section-title">Change Overlay</div>
+                <div class="bt-full-img"><img id="btResultOverlay" alt="Change Overlay"><div class="bt-img-label">AFTER IMAGE + CHANGE HIGHLIGHTS</div></div>
+              </div>
+
+              <!-- AI Explanation -->
+              <div class="bt-section">
+                <div class="bt-section-title">AI Explanation</div>
+                <div class="bt-explanation" id="btExplanation"></div>
+              </div>
+
+              <!-- Change Summary -->
+              <div class="bt-section">
+                <div class="bt-section-title">Change Summary</div>
+                <table class="bt-summary-table" id="btSummaryTable">
+                  <thead><tr><th>Region</th><th>Location</th><th>Area</th><th>Magnitude</th><th>Confidence</th></tr></thead>
+                  <tbody id="btSummaryBody"></tbody>
+                </table>
+                <div class="bt-stats-row" id="btStatsRow"></div>
+              </div>
+
+              <!-- Execution Trace -->
+              <div class="bt-section">
+                <div class="bt-section-title">Execution Trace</div>
+                <div class="bt-trace" id="btTrace"></div>
+              </div>
+
+              <!-- Actions -->
+              <div class="result-actions" style="margin-top:20px;">
+                <button class="btn btn-primary btn-sm" onclick="btReset()">New Analysis</button>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /biTemporalContent -->
+
+        <!-- ============ OPTICAL + SAR FUSION PANEL ============ -->
+        <div id="fusionContent" class="hidden">
+          <div class="fusion-panel">
+            <div class="fusion-header">
+              <h2>∿ Optical + SAR Multimodal Fusion</h2>
+              <div class="fusion-sub">Fuse multispectral optical imagery with radar backscatter for all-weather feature extraction and query-aware reasoning</div>
+            </div>
+
+            <!-- Upload Optical / SAR -->
+            <div class="fusion-upload-grid">
+              <div class="fusion-upload-card" id="fusionSlotOpt" onclick="fusionTriggerUpload('opt')">
+                <div class="fusion-slot-icon">⇪</div>
+                <div class="fusion-slot-label">OPTICAL IMAGE</div>
+                <div class="fusion-slot-sub">Multispectral / RGB satellite scene (GeoTIFF / PNG / JPEG)</div>
+                <input class="fusion-file" type="file" id="fusionFileOpt" accept="image/png,image/jpeg,image/tiff,.png,.jpg,.jpeg,.tif,.tiff" onchange="fusionHandleUpload('opt', this)">
+              </div>
+              <div class="fusion-upload-card" id="fusionSlotSar" onclick="fusionTriggerUpload('sar')">
+                <div class="fusion-slot-icon">⇪</div>
+                <div class="fusion-slot-label">SAR RADAR IMAGE</div>
+                <div class="fusion-slot-sub">Radar backscatter / amplitude scene (GeoTIFF / PNG / JPEG)</div>
+                <input class="fusion-file" type="file" id="fusionFileSar" accept="image/png,image/jpeg,image/tiff,.png,.jpg,.jpeg,.tif,.tiff" onchange="fusionHandleUpload('sar', this)">
+              </div>
+            </div>
+
+            <!-- Query Section -->
+            <div class="fusion-query-section">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <label class="flabel" style="margin-bottom:0;">Natural Language Question</label>
+                <div class="fusion-method-box">
+                  <label for="fusionMethodSelect" style="font-family:var(--mono);font-size:10.5px;color:var(--tx3);margin-right:6px;">FUSION METHOD:</label>
+                  <select id="fusionMethodSelect" class="fusion-select">
+                    <option value="composite">False-Color Optical-SAR Composite</option>
+                    <option value="ihs">IHS Spatial Texture Modulation</option>
+                  </select>
+                </div>
+              </div>
+              <textarea id="fusionQueryInput" placeholder="e.g. Has this area flooded? · Identify built-up and urban structures · Analyze crop and vegetation · Detect features under cloud cover"></textarea>
+            </div>
+
+            <!-- Suggested queries -->
+            <div class="chips" style="margin-bottom:22px;">
+              <button class="chip" onclick="fusionSetQuery('Has this area flooded or experienced water inundation?')">Flooding / Water?</button>
+              <button class="chip" onclick="fusionSetQuery('Identify all built-up urban structures and infrastructure.')">Urban structures?</button>
+              <button class="chip" onclick="fusionSetQuery('What surface features are present under optical clouds/shadows?')">All-weather features?</button>
+              <button class="chip" onclick="fusionSetQuery('Analyze agricultural fields and vegetation status.')">Vegetation status?</button>
+              <button class="chip" onclick="fusionSetQuery('Provide a comprehensive cross-modal scene interpretation.')">Full interpretation</button>
+            </div>
+
+            <!-- Analyze button -->
+            <div class="fusion-analyze-row">
+              <button class="btn-analyze-fusion" id="fusionAnalyzeBtn" onclick="runFusionAnalysis()" disabled>RUN FUSION ANALYSIS</button>
+            </div>
+
+            <!-- Progress -->
+            <div id="fusionProgress" class="fusion-progress hidden"></div>
+
+            <!-- Error -->
+            <div id="fusionError" class="fusion-error hidden"></div>
+
+            <!-- Results -->
+            <div id="fusionResults" class="fusion-results hidden">
+
+              <!-- Modality Triplet: Optical vs SAR vs Fused Composite -->
+              <div class="fusion-section">
+                <div class="fusion-section-title">Modality Triplet &amp; Fused Composite</div>
+                <div class="fusion-triple-row">
+                  <div class="fusion-img-card">
+                    <img id="fusionResultOpt" alt="Optical Image">
+                    <div class="fusion-img-label">OPTICAL SCENE (RGB)</div>
+                  </div>
+                  <div class="fusion-img-card">
+                    <img id="fusionResultSar" alt="SAR Image">
+                    <div class="fusion-img-label">SAR RADAR (LOG-SCALED BACKSCATTER)</div>
+                  </div>
+                  <div class="fusion-img-card">
+                    <img id="fusionResultComposite" alt="Fused Composite">
+                    <div class="fusion-img-label">FUSED COMPOSITE + DETECTED FEATURES</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Evidence Breakdown -->
+              <div class="fusion-section">
+                <div class="fusion-section-title">Cross-Modal Evidence Breakdown</div>
+                <div class="fusion-evidence-grid">
+                  <div class="fusion-evidence-card opt">
+                    <div class="fusion-evidence-header">
+                      <span class="fusion-evidence-dot opt"></span>
+                      <span class="fusion-evidence-title">OPTICAL EVIDENCE</span>
+                    </div>
+                    <div class="fusion-evidence-text" id="fusionOpticalEvidence">—</div>
+                  </div>
+                  <div class="fusion-evidence-card sar">
+                    <div class="fusion-evidence-header">
+                      <span class="fusion-evidence-dot sar"></span>
+                      <span class="fusion-evidence-title">SAR RADAR EVIDENCE</span>
+                    </div>
+                    <div class="fusion-evidence-text" id="fusionSarEvidence">—</div>
+                  </div>
+                  <div class="fusion-evidence-card fused">
+                    <div class="fusion-evidence-header">
+                      <span class="fusion-evidence-dot fused"></span>
+                      <span class="fusion-evidence-title">FUSED MULTIMODAL INTERPRETATION</span>
+                    </div>
+                    <div class="fusion-evidence-text" id="fusionFusedInterp">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quantitative Agreement Heatmap -->
+              <div class="fusion-section" id="fusionEvidenceMapSec">
+                <div class="fusion-section-title">Quantitative Cross-Modal Agreement Map</div>
+                <div class="fusion-full-img">
+                  <img id="fusionResultEvidenceMap" alt="Agreement Map">
+                  <div class="fusion-img-label">CROSS-MODAL AGREEMENT HEATMAP (Cyan = Water Consensus, Magenta = Structure Consensus)</div>
+                </div>
+              </div>
+
+              <!-- Cross-Modal Features Table -->
+              <div class="fusion-section">
+                <div class="fusion-section-title">Detected Cross-Modal Features</div>
+                <table class="fusion-summary-table" id="fusionFeatureTable">
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Category</th>
+                      <th>Location</th>
+                      <th>Optical Observation</th>
+                      <th>SAR Observation</th>
+                      <th>Agreement</th>
+                      <th>Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fusionFeatureBody"></tbody>
+                </table>
+                <div class="fusion-stats-row" id="fusionStatsRow"></div>
+              </div>
+
+              <!-- Physical Diagnostics Panel -->
+              <div class="fusion-section" id="fusionDiagnosticsSec">
+                <div class="fusion-section-title">Physical &amp; Geospatial Diagnostics</div>
+                <div class="fusion-diag-grid" id="fusionDiagGrid"></div>
+              </div>
+
+              <!-- Execution Trace -->
+              <div class="fusion-section">
+                <div class="fusion-section-title">Execution Trace</div>
+                <div class="fusion-trace" id="fusionTrace"></div>
+              </div>
+
+
+              <!-- Actions -->
+              <div class="result-actions" style="margin-top:20px;">
+                <button class="btn btn-primary btn-sm" onclick="fusionReset()">New Analysis</button>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /fusionContent -->
+      </div>
+    </div>
+ 
+    <!-- MODELS VIEW -->
+    <div id="view-models" class="hidden">
+      <div class="topbar"><div><h1>Model Registry</h1><div class="sub">// specialist models available to the agent</div></div></div>
+      <div class="content">
+        <div class="model-grid" id="modelGrid"></div>
+      </div>
+    </div>
+ 
+    <!-- HISTORY VIEW -->
+    <div id="view-history" class="hidden">
+      <div class="topbar"><div><h1>Analysis History</h1><div class="sub">// recent agent runs (session)</div></div></div>
+      <div class="content"><div class="panel" id="historyPanel"></div></div>
+    </div>
+ 
+    <!-- DATASETS VIEW -->
+    <div id="view-datasets" class="hidden">
+      <div class="topbar"><div><h1>Datasets</h1><div class="sub">// imagery sources available to specialist models</div></div></div>
+      <div class="content">
+        <div class="model-grid">
+          <div class="model-card"><h3>Sentinel-2</h3><div class="mtask">OPTICAL · 10m RESOLUTION</div><p>Multispectral optical imagery used for VQA, captioning, grounding and change analysis.</p><div class="status"><span class="led" style="width:6px;height:6px;border-radius:50%;background:var(--green);"></span>CONNECTED</div></div>
+          <div class="model-card"><h3>Sentinel-1 (SAR)</h3><div class="mtask">RADAR · ALL-WEATHER</div><p>C-band synthetic aperture radar, used for cloud/illumination-independent structure detection.</p><div class="status"><span class="led" style="width:6px;height:6px;border-radius:50%;background:var(--green);"></span>CONNECTED</div></div>
+          <div class="model-card"><h3>BigEarthNet</h3><div class="mtask">LABELED BENCHMARK</div><p>Large-scale labeled patch archive used for training and evaluating specialist classifiers.</p><div class="status"><span class="led" style="width:6px;height:6px;border-radius:50%;background:var(--green);"></span>CONNECTED</div></div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- SETTINGS VIEW -->
+    <div id="view-settings" class="hidden">
+      <div class="topbar"><div><h1>Settings</h1><div class="sub">// agent configuration</div></div></div>
+      <div class="content">
+        <div class="panel" style="max-width:520px;margin-bottom:18px;">
+          <div class="panel-head"><h2>◈ AI Answer Engine (Gemini)</h2><span class="tag" id="geminiStatusTag">simulated</span></div>
+          <label class="flabel">Google AI Studio API Key</label>
+          <input type="password" id="geminiKeyInput" placeholder="Paste your Gemini API key (kept in this browser only)" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:5px;padding:10px 12px;color:var(--tx);font-family:var(--mono);font-size:12px;margin-bottom:12px;">
+          <div class="vitem" style="margin-bottom:14px;">
+            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-family:var(--body);font-size:12.5px;color:var(--tx2);">
+              <input type="checkbox" id="geminiEnableToggle" style="width:15px;height:15px;">
+              Use Gemini for live query answers (falls back to simulated answers if off / no key / request fails)
+            </label>
+          </div>
+          <div class="actions-row">
+            <button class="btn btn-primary btn-sm" onclick="saveGeminiSettings()">Save</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearGeminiSettings()">Clear Key</button>
+          </div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:12px;line-height:1.6;">
+            Key is stored only in this browser's localStorage and sent directly from your browser to Google's Generative Language API. Never committed to any server. Get a free key at aistudio.google.com.
+          </div>
+        </div>
+        <div class="panel" style="max-width:520px;">
+          <div class="panel-head"><h2>Agent Preferences</h2></div>
+          <label class="flabel">Coordinate format</label>
+          <select id="coordFormatSelect" onchange="saveCoordFormat()" style="width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:5px;padding:10px 12px;color:var(--tx);font-family:var(--mono);font-size:12px;margin-bottom:14px;">
+            <option value="DD">Decimal Degrees</option>
+            <option value="DMS">Degrees Minutes Seconds (DMS)</option>
+          </select>
+          <div class="validation-list">
+            <div class="vitem"><span class="chk">✓</span>Auto-select specialist model</div>
+            <div class="vitem"><span class="chk">✓</span>Show execution trace by default</div>
+            <div class="vitem"><span class="chk">✓</span>Strict input validation</div>
+            <div class="vitem"><span class="chk">✓</span>Prefer SAR fallback under cloud cover</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
